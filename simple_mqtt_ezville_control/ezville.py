@@ -972,19 +972,26 @@ def ezville_loop(config):
                         )
                     )
 
-                    # 일괄 차단기는 state를 변경하여 제공해서 월패드에서 조작하도록 해야함
-                    # 월패드의 ACK는 무시
+                    # 일괄 차단기는 "상태 응답(0x81)"이 아니라 "개별 동작 제어요구(0x41)"로
+                    # 명령을 보내야 함 (0x81은 일괄차단기->마스터 방향 프레임이라
+                    # 마스터가 이 프레임을 보내도 실제 하드웨어가 요청으로 인식하지 않음).
+                    # 이에 맞춰 ACK(0xC1)도 기다려서 실제로 반영됐는지 확인한다.
                     sendcmd = checksum(
                         "F7"
-                        + RS485_DEVICE[device]["state"]["id"]
+                        + RS485_DEVICE[device]["press"]["id"]
                         + f"0{idx}"
-                        + RS485_DEVICE[device]["state"]["cmd"]
+                        + RS485_DEVICE[device]["press"]["cmd"]
                         + "0300"
                         + CMD
                         + "000000"
                     )
-                    recvcmd = "NULL"
-                    statcmd = [key, "NULL"]
+                    recvcmd = (
+                        "F7"
+                        + RS485_DEVICE[device]["press"]["id"]
+                        + f"1{idx}"
+                        + RS485_DEVICE[device]["press"]["ack"]
+                    )
+                    statcmd = [key, "ON"]
 
                     await CMD_QUEUE.put(
                         {"sendcmd": sendcmd, "recvcmd": recvcmd, "statcmd": statcmd}
